@@ -1,67 +1,173 @@
 <?php
-require_once 'koneksi.php';
-require_once 'helpers.php';
-require_login();
 
-// ambil list barang
-$result = $mysqli->query("SELECT * FROM barang ORDER BY created_at DESC");
+require_once __DIR__ . '/fungsi.php';
+
+// Cek login
+requireLogin();
+
+// Handle Delete jika ada parameter delete_id
+if (isset($_GET['delete_id'])) {
+    $id = $_GET['delete_id'];
+    $koneksi->query("DELETE FROM barang WHERE id = $id");
+    header("Location: index.php");
+    exit();
+}
+
+// Ambil semua data barang
+$items = $koneksi->query("SELECT * FROM barang")->fetch_all(MYSQLI_ASSOC);
 ?>
-<!doctype html>
-<html>
+
+<!DOCTYPE html>
+<html lang="id">
 
 <head>
-    <meta charset="utf-8">
-    <title>Inventaris Barang</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <meta charset="UTF-8">
+    <title>Daftar Barang</title>
+
+    <style>
+        body {
+            background: #ffd6ec;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        nav {
+            background: #ffe3f1;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        nav a {
+            text-decoration: none;
+            padding: 6px 12px;
+            background: white;
+            border-radius: 6px;
+            color: #444;
+            font-weight: bold;
+            border: 1px solid #f5b6d6;
+        }
+
+        nav a:hover {
+            background: #ffccdf;
+        }
+
+        h2 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            margin-left: 2px;
+        }
+
+        /* Tombol Tambah */
+        a[href*="form_barang"] {
+            background: #ffb6d6;
+            padding: 8px 14px;
+            color: white !important;
+            border-radius: 6px;
+            font-weight: bold;
+            text-decoration: none;
+            border: 1px solid #ff9ec8;
+        }
+
+        a[href*="form_barang"]:hover {
+            background: #ff8fbe;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #ffb8d9;
+        }
+
+        thead th {
+            padding: 12px;
+            text-align: left;
+            color: white;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #ffe7f2;
+        }
+
+        tbody tr:hover {
+            background: #ffd0e5;
+        }
+
+        td {
+            padding: 12px;
+            color: #333;
+        }
+
+        /* Link aksi */
+        td a {
+            color: #cc2d6f;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        td a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Inventaris Barang</h1>
-        <p>Selamat datang, <?= htmlspecialchars($_SESSION['user_name']) ?> <br>
 
-        </p>
-        <p>
-            <a href="barang_add.php">Tambah Barang</a> |
-            <a href="transaksi.php">Lihat Transaksi</a> | <a href="logout.php">Logout</a>
-        </p>
+    <nav>
+        <a href="index.php">📦Barang</a>
+        <a href="transaksi.php">📝Transaksi</a>
+        <?php if (isSuperAdmin()): ?>
+            <a href="users.php">👥Users</a>
+        <?php endif; ?>
+        <a href="logout.php" style="color: red;">🚪Logout</a>
+    </nav>
 
-        <table border="1" cellpadding="6" cellspacing="0">
+    <div class="top-area">
+        <h2>Daftar Barang</h2>
+        <a href="form_barang.php">+ Tambah Barang</a>
+    </div>
+
+    <table>
+        <thead>
             <tr>
-
-                <th>Kode</th>
                 <th>Nama</th>
                 <th>Deskripsi</th>
-                <th>Jumlah</th>
+                <th>Stok</th>
                 <th>Tersedia</th>
                 <th>Lokasi</th>
                 <th>Aksi</th>
             </tr>
-            <?php while ($row = $result->fetch_assoc()): ?>
-                <tr>
+        </thead>
 
-                    <td><?= htmlspecialchars($row['kode']) ?></td>
-                    <td><?= htmlspecialchars($row['nama']) ?></td>
-                    <td><?= nl2br(htmlspecialchars($row['deskripsi'])) ?></td>
-                    <td><?= $row['jumlah'] ?></td>
-                    <td><?= $row['tersedia'] ?></td>
-                    <td><?= htmlspecialchars($row['lokasi']) ?></td>
+        <tbody>
+            <?php foreach ($items as $item): ?>
+                <tr>
+                    <td><?= $item['nama'] ?></td>
+                    <td><?= $item['deskripsi'] ?></td>
+                    <td><?= $item['jumlah'] ?></td>
+                    <td><?= $item['tersedia'] ?></td>
+                    <td><?= $item['lokasi'] ?></td>
                     <td>
-                        <a href="barang_edit.php?id=<?= $row['id'] ?>">Edit</a> |
-                        <a href="barang_delete.php?id=<?= $row['id'] ?>" onclick="return confirm('Hapus barang?')">Hapus</a> |
-                        <?php if ($row['tersedia'] > 0): ?>
-                            <a href="pinjam.php?id=<?= $row['id'] ?>">Pinjam</a>
-                        <?php else: ?>
-                            <span style="color:gray">Kosong</span>
-                        <?php endif; ?>
-                        <?php if ($row['jumlah'] > $row['tersedia']): ?>
-                            | <a href="kembalikan.php?id=<?= $row['id'] ?>">Kembalikan</a>
-                        <?php endif; ?>
+                        <a class="action-btn" href="form_barang.php?id=<?= $item['id'] ?>">Edit</a> |
+                        <a class="action-btn" href="peminjaman.php?action=pinjam&id=<?= $item['id'] ?>">Pinjam</a> |
+                        <a class="action-btn" href="index.php?delete_id=<?= $item['id'] ?>" onclick="return confirm('Hapus?')">Hapus</a>
                     </td>
                 </tr>
-            <?php endwhile; ?>
-        </table>
-    </div>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
 </body>
 
 </html>
